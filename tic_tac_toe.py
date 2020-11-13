@@ -1,4 +1,6 @@
 import os
+import time
+import math
 
 
 def init_board(size):
@@ -38,21 +40,64 @@ def get_move(board):
             try:
                 row = row_coords.index(player_input[0])
                 col = int(player_input[1]) - 1
-                if (is_valid_move(board, row, col)):
+                if not is_valid_move(board, row, col):
                     raise ValueError
                 is_not_valid = False
-            except TypeError or ValueError:
+            except TypeError and ValueError:
                 print("Given the wrong coordinates.")
         else:
             print("It doesn't look like the board coordinates.")
     return (row, col)
 
 
-# TODO get_ai_move function
-def get_ai_move(board, player):
+def minmax(board, player, depth, is_maximazing):
+    opponent = "0" if player == "X" else "X"
+
+    if has_won(board, player):
+        return 1
+    elif has_won(board, opponent):
+        return -1
+    elif is_full(board):
+        return 0
+
+    if is_maximazing:
+        best_score = -math.inf
+        for i in range(len(board)):
+            for j in range(len(board)):
+                if board[i][j] == ".":
+                    mark(board, player, (i, j))
+                    score = minmax(board, player, depth+1, False)
+                    board[i][j] = "."
+                    best_score = max(score, best_score)
+        return best_score
+    else:
+        best_score = math.inf
+        for i in range(len(board)):
+            for j in range(len(board)):
+                if board[i][j] == ".":
+                    mark(board, opponent, (i, j))
+                    score = minmax(board, player, depth+1, True)
+                    board[i][j] = "."
+                    best_score = min(score, best_score)
+        return best_score
+
+
+def get_ai_move(board, computer):
     """Returns the coordinates of a valid move for player on board."""
-    row, col = 0, 0
-    return row, col
+    best_score = -math.inf
+    best_move = None
+
+    for i in range(len(board)):
+        for j in range(len(board)):
+            if board[i][j] == ".":
+                mark(board, computer, (i, j))
+                score = minmax(board, computer, 0, False)
+                board[i][j] = "."
+                if score > best_score:
+                    best_score = score
+                    best_move = (i, j)
+
+    mark(board, computer, best_move)
 
 
 def mark(board, sign, coordinates):
@@ -155,6 +200,7 @@ def print_board(board):
 
 def print_result(winner):
     """Congratulates winner or proclaims tie (if winner equals zero)."""
+    print("The End")
     if winner in ["X", "0"]:
         print(f"{winner} has won!")
     elif winner == "T":
@@ -167,9 +213,7 @@ def human_human_mode(board):
 
     while not winner:
         if is_full(board):
-            print("The End")
             winner = "T"
-            print_result(winner)
         else:
             print(f"Player's {player} turn")
             move = get_move(board)
@@ -180,25 +224,74 @@ def human_human_mode(board):
 
             if has_won(board, player):
                 winner = player
-                print("The End")
-                print_result(winner)
+            else:
+                player = "0" if player == "X" else "X"
+    print_result(winner)
 
-            player = "0" if player == "X" else "X"
+
+def human_ai_mode(board, human_turn):
+    player = "0"
+    human_sign = ["0", "X"][human_turn]
+    ai_sign = "0" if human_sign == "X" else "X"
+    winner = None
+
+    while not winner:
+        if is_full(board):
+            winner = "T"
+        else:
+            print(f"Player's {player} turn")
+            if player == human_sign:
+                move = get_move(board)
+                if not move:
+                    break
+                mark(board, player, move)
+            elif player == ai_sign:
+                time.sleep(1)
+                get_ai_move(board, player)
+            print_board(board)
+
+            if has_won(board, player):
+                winner = player
+            else:
+                player = "0" if player == "X" else "X"
+    print_result(winner)
 
 
-def tictactoe_game(mode='HUMAN-HUMAN', board_size=3):
+def ai_ai_mode(board):
+    player = "0"
+    winner = None
+
+    while not winner:
+        if is_full(board):
+            winner = "T"
+        else:
+            print(f"Player's {player} turn")
+            time.sleep(1)
+            get_ai_move(board, player)
+            print_board(board)
+
+            if has_won(board, player):
+                winner = player
+            else:
+                player = "0" if player == "X" else "X"
+    print_result(winner)
+
+
+def tictactoe_game(mode="HUMAN-HUMAN", board_size=3):
     board = init_board(board_size)
     print_board(board)
 
-    if mode == 'HUMAN-HUMAN':
+    if mode == "HUMAN-HUMAN":
         human_human_mode(board)
+    elif mode == "HUMAN-AI":
+        human_ai_mode(board, 0)
+    elif mode == "AI-HUMAN":
+        human_ai_mode(board, 1)
+    elif mode == "AI-AI":
+        ai_ai_mode(board)
 
-    # TODO game logic for HUMAN-AI and AI-HUMAN mode
-    elif mode == 'HUMAN-AI':
-        pass
 
-
-def give_option(text, options):
+def get_option(text, options):
     is_valid_option = False
     player_input = None
     while not is_valid_option:
@@ -213,22 +306,30 @@ def give_option(text, options):
     return player_input
 
 
+def get_str_input_mode(modes):
+    str_input_mode = ""
+    for i in range(1, len(modes)+1):
+        str_input_mode += f"{i}) \"{modes[i-1]}\" mode\n"
+    str_input_mode += "\nChoose mode: "
+    return str_input_mode
+
+
 def main_menu():
     is_not_valid = True
 
     while (is_not_valid):
         os.system("cls || clear")
-        input_mode = give_option('1) "2-player mode"\n2) "player against-AI mode"\n\nChoose mode: ', [1, 2])
-        board_size = give_option("Enter board size (3-5): ", [3, 4, 5])
+        modes = ["HUMAN-HUMAN", "HUMAN-AI", "AI-HUMAN", "AI-AI"]
+        str_input_mode = get_str_input_mode(modes)
 
-        if input_mode == 1:
-            mode = 'HUMAN-HUMAN'
+        print("Tic Tac Toe\n")
+        input_mode = get_option(str_input_mode, range(1, len(modes)+1))
+
+        if input_mode in range(1, len(modes)+1):
+            board_size = get_option("Enter board size (3-5): ", [3, 4, 5]) if input_mode == 1 else 3
+            mode = modes[input_mode-1]
             print(f"You've chosen mode {mode}")
-            tictactoe_game(mode, board_size)
-            is_not_valid = False
-        elif input_mode == 2:
-            mode = 'HUMAN-AI'
-            print(f"You've chosen mode {mode}")
+            time.sleep(2)
             tictactoe_game(mode, board_size)
             is_not_valid = False
         else:
