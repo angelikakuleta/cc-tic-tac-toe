@@ -1,6 +1,9 @@
 import os
 import time
 import math
+import pygame
+
+WHITE = (255, 255, 255)
 
 
 def init_board(size):
@@ -309,31 +312,93 @@ def get_option(text, options):
 def get_str_input_mode(modes):
     str_input_mode = ""
     for i in range(1, len(modes)+1):
-        str_input_mode += f"{i}) \"{modes[i-1]}\" mode\n"
+        str_input_mode += f"{i} - {modes[i-1]} mode\n"
     str_input_mode += "\nChoose mode: "
     return str_input_mode
 
 
 def main_menu():
-    is_not_valid = True
+    os.system("cls || clear")
+    modes = ["HUMAN-HUMAN", "HUMAN-HUMAN GUI*", "HUMAN-AI", "AI-HUMAN", "AI-AI"]
+    str_input_mode = get_str_input_mode(modes)
 
-    while (is_not_valid):
-        os.system("cls || clear")
-        modes = ["HUMAN-HUMAN", "HUMAN-AI", "AI-HUMAN", "AI-AI"]
-        str_input_mode = get_str_input_mode(modes)
+    print("Tic Tac Toe\n")
+    input_mode = get_option(str_input_mode, range(1, len(modes)+1))
 
-        print("Tic Tac Toe\n")
-        input_mode = get_option(str_input_mode, range(1, len(modes)+1))
+    if input_mode == 2:
+        window_tictactoe_game()
+    else:
+        board_size = get_option("Enter board size (3-5): ", [3, 4, 5]) if input_mode == 1 else 3
+        mode = modes[input_mode-1]
+        print(f"You've chosen mode {mode}")
+        time.sleep(2)
+        tictactoe_game(mode, board_size | 3)
 
-        if input_mode in range(1, len(modes)+1):
-            board_size = get_option("Enter board size (3-5): ", [3, 4, 5]) if input_mode == 1 else 3
-            mode = modes[input_mode-1]
-            print(f"You've chosen mode {mode}")
-            time.sleep(2)
-            tictactoe_game(mode, board_size)
-            is_not_valid = False
-        else:
-            print("You didn't select valid mode")
+
+def get_clicked_field():
+    x, y = pygame.mouse.get_pos()
+
+    if x > 50 and x < 350 and y > 50 and y < 350:
+        row = int((x-50) / 100)
+        col = int((y-50) / 100)
+        return (row, col)
+    else:
+        return None
+
+
+def draw_sign(screen, coordinates, player):
+    x = 100 + (coordinates[0]*100)
+    y = 100 + (coordinates[1]*100)
+
+    sign = "x" if player == "X" else "o"
+    font = pygame.font.SysFont(None, 144)
+    text = font.render(sign, True, WHITE)
+    rect = text.get_rect()
+    rect.center = (x, y)
+    screen.blit(text, rect)
+    pygame.display.update()
+
+
+def window_tictactoe_game():
+    pygame.init()
+    width = 400
+    height = 400
+    screen = pygame.display.set_mode((width, height))
+
+    pygame.draw.line(screen, WHITE, (50, 150), (350, 150), 2)
+    pygame.draw.line(screen, WHITE, (50, 250), (350, 250), 2)
+    pygame.draw.line(screen, WHITE, (150, 50), (150, 350), 2)
+    pygame.draw.line(screen, WHITE, (250, 50), (250, 350), 2)
+
+    pygame.display.update()
+
+    board = init_board(3)
+    player = "X"
+    winner = None
+
+    print(f"Player's {player} turn")
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                move = get_clicked_field()
+                if (move):
+                    mark(board, player, move)
+                    draw_sign(screen, move, player)
+
+                    if is_full(board):
+                        winner = "T"
+                        running = False
+                    elif has_won(board, player):
+                        winner = player
+                        running = False
+                    else:
+                        player = "0" if player == "X" else "X"
+                        print(f"Player's {player} turn")
+    print_result(winner)
+    pygame.quit()
 
 
 if __name__ == '__main__':
